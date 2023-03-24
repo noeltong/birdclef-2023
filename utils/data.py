@@ -6,7 +6,7 @@ from utils import audio
 
 
 class BirdCLEFDataset(Dataset):
-    def __init__(self, data_lst, mode, sample_rate=32000, resample_rate=16000, num_channels=3, duration=8000):
+    def __init__(self, data_lst, mode, sample_rate=32000, resample_rate=16000, num_channels=3, duration=8000, shift_factor=0.4):
         super().__init__()
         self.data = data_lst
         self.sample_rate = sample_rate
@@ -14,6 +14,10 @@ class BirdCLEFDataset(Dataset):
         self.channel = num_channels
         self.duration = duration
         self.mode = mode
+        self.shift_factor = shift_factor
+        self.n_fft = 1024
+        self.n_mels = 256
+        self.n_masks = 2
 
     def __getitem__(self, idx):
         path, label = self.data[idx]
@@ -21,7 +25,7 @@ class BirdCLEFDataset(Dataset):
 
         aud = audio.resample(aud, self.resample_rate)
         aud = audio.rechannel(aud, self.channel)
-        aud = audio.pad_trunc(aud, self.resample_rate, self.duration)
+        aud = audio.pad_trunc(aud, self.duration)
 
         if self.mode == 'train':
             sg1 = self.sg_augment(aud)
@@ -41,6 +45,8 @@ class BirdCLEFDataset(Dataset):
         aud = audio.time_shift(aud, self.shift_factor)
         sg = audio.spectrogram(aud, n_mels=self.n_mels, n_fft=self.n_fft, hop_len=None)
         sg = audio.spectro_augment(sg, max_mask_pct=0.1, n_freq_masks=self.n_masks, n_time_masks=self.n_masks)
+
+        return sg
     
 
 def get_dataloader(config, mode):
