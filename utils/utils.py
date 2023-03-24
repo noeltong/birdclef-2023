@@ -1,6 +1,6 @@
 import random
 import os
-import np
+import numpy as np
 import torch
 
 

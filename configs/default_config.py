@@ -1,7 +1,7 @@
 from ml_collections.config_dict import ConfigDict
 
 
-def default_config():
+def get_config():
 
     cfg = ConfigDict()
 
@@ -9,9 +9,9 @@ def default_config():
     # Train
     # ----------------
 
-    training = cfg.train = ConfigDict()
+    training = cfg.training = ConfigDict()
     training.num_epochs = 500
-    training.batch_size = 64
+    training.batch_size = 16
     training.save_ckpt_freq = 100
     training.eval_freq = 50
 
@@ -48,6 +48,8 @@ def default_config():
 
 
     cfg.seed = 42
+    cfg.distributed = True
+    cfg.use_deterministic_algorithms = True
 
 
     return cfg

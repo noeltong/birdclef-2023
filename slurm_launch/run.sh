@@ -14,4 +14,4 @@
 #SBATCH --time=10-00:00:00
 #SBATCH --exclude=sist_gpu[38,63-66]
 
-torchrun --nproc_per_node=4 main.py --mode finetune --config config/Fish/finetune_recon_vit_base_randommask.py --workdir fish_vit_base_finetune_randommask_250epochs_1e-4_randommask
+torchrun --nproc_per_node=4 main.py --mode train --config configs/default_config.py --workdir test
