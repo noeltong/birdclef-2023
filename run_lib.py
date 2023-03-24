@@ -89,13 +89,7 @@ def train(config, workdir):
     if rank == 0:
         logger.info('Begin model initialization...')
 
-    model = SimSiam(
-        base_encoder=ConvNeXt(
-            depths=config.model.depths,
-            dims=config.model.dims,
-            drop_path_rate=config.model.drop_path_rate
-        ),
-    )
+    model = SimSiam(config=config)
 
     model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
     model = model.cuda()
@@ -125,7 +119,8 @@ def train(config, workdir):
 
     init_lr = config.optim.initial_lr * config.training.batch_size / 256
 
-    logger.info('Handling optimizations...')
+    if rank == 0:
+        logger.info('Handling optimizations...')
 
     if config.optim.optimizer.lower() == 'adamw':
         optimizer = torch.optim.AdamW(
@@ -176,6 +171,9 @@ def train(config, workdir):
         raise ValueError(f'{config.optim.schedule} is not supported.')
     
     criterion = nn.CosineSimilarity(dim=1).cuda()
+
+    if rank == 0:
+        logger.info('Completed.')
 
     # -------------------
     # training loop
@@ -317,3 +315,11 @@ def train(config, workdir):
     if rank == 0:
         logger.info(
             f'Training complete.\nTotal time:, {time_logger.time_length()}\nFinal loss:, {avg_train_loss_epoch}\nBest loss:, {best_loss}\nFinal eval loss:, {avg_eval_loss_epoch}')
+
+
+def tune(config, workdir):
+    pass
+
+
+def eval(config, workdir):
+    pass
