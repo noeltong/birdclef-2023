@@ -30,25 +30,31 @@ def list_paths_classes():
         for idx in f.readlines():
             classes.append(idx.strip())
 
-    def path_label_replace(df, dir):
+    def path_label_replace_21(df, dir):
         path = os.path.join(dir, df['primary_label'], df['filename'])
+        label = classes.index(df['primary_label'])
+
+        return [label, path]
+    
+    def path_label_replace_22(df, dir):
+        path = os.path.join(dir, df['filename'])
         label = classes.index(df['primary_label'])
 
         return [label, path]
 
     df1 = pd.read_csv('/storage/data/tongshq/kaggle/birdclef/birdclef-2021/train_metadata.csv')
     df1 = df1.loc[:, ['primary_label', 'filename']]
-    df1 = df1.apply(path_label_replace, dir='/storage/data/tongshq/kaggle/birdclef/birdclef-2021/train_short_audio', axis=1, result_type='expand')
+    df1 = df1.apply(path_label_replace_21, dir='/storage/data/tongshq/kaggle/birdclef/birdclef-2021/train_short_audio', axis=1, result_type='expand')
     df1.columns = ['label', 'path']
 
     df2 = pd.read_csv('/storage/data/tongshq/kaggle/birdclef/birdclef-2022/train_metadata.csv')
     df2 = df2.loc[:, ['primary_label', 'filename']]
-    df2 = df2.apply(path_label_replace, dir='/storage/data/tongshq/kaggle/birdclef/birdclef-2022/train_audio', axis=1, result_type='expand')
+    df2 = df2.apply(path_label_replace_22, dir='/storage/data/tongshq/kaggle/birdclef/birdclef-2022/train_audio', axis=1, result_type='expand')
     df2.columns = ['label', 'path']
 
     result = pd.concat([df1, df2], axis=0)
     print(f'Number of samples: {result.shape[0]}')
-    result.to_csv('model_data/data_all.csv', index=None)
+    result.to_csv('model_data/data_all.csv', index=None, header=None)
 
 
 
