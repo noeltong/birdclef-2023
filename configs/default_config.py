@@ -5,8 +5,27 @@ def default_config():
 
     cfg = ConfigDict()
 
-    pretrain = cfg.pretrain = ConfigDict()
-    pretrain.num_epochs = 500
+    # ----------------
+    # Train
+    # ----------------
+
+    training = cfg.train = ConfigDict()
+    training.num_epochs = 500
+    training.batch_size = 64
+    training.save_ckpt_freq = 100
+    training.eval_freq = 50
+
+    # ----------------
+    # Model
+    # ----------------
+
+    model = cfg.model = ConfigDict()
+    model.depths = [3, 3, 27, 3]
+    model.dims = [128, 256, 512, 1024]
+    model.drop_path_rate = 0.1
+    model.head_out_dim = 2048
+    model.pred_dim = 512
+    model.clip_grad_norm = 1.
 
 
     # ----------------
@@ -14,10 +33,10 @@ def default_config():
     # ----------------
 
     cfg.optim = optim = ConfigDict()
-    optim.optimizer = 'LAMB'
+    optim.optimizer = 'LARS'
     optim.schedule = 'CosineAnnealingLR'
     optim.grad_clip = 1.
-    optim.initial_lr = 2.5e-4
+    optim.initial_lr = 2e-3
     optim.weight_decay = 0.1
     optim.min_lr = 0.001 * optim.initial_lr
     optim.warmup_epochs = 25
