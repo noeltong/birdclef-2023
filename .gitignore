@@ -163,4 +163,5 @@ test.py
 test.ipynb
 # data/
 models/preprocess.py
-/workspace
+workspace/
+logs/
