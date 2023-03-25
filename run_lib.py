@@ -95,9 +95,6 @@ def train(config, workdir):
     model = model.cuda()
     model = DistributedDataParallel(model, device_ids=[rank])
 
-    # find_unused_parameters=True is needed to suppress the error of unused parameters...
-    # maybe a bug of pytorch?
-
     model_without_ddp = model.module
 
     # if config.model.ema:
@@ -209,7 +206,7 @@ def train(config, workdir):
         while x1 is not None:
             with torch.cuda.amp.autocast(enabled=True):
                 p1, p2, z1, z2 = model(x1, x2)
-                loss = -(criterion(p1, z2).mean() + criterion(p2, z1).mean()) / 2.
+                loss = 1 - (criterion(p1, z2).mean() + criterion(p2, z1).mean()) / 2.
 
             train_loss_epoch += loss.item()
 
@@ -218,7 +215,7 @@ def train(config, workdir):
                                   epoch * iters_per_epoch + i)
 
             logger.info(
-                f'Epoch: {epoch + 1:4d}/{config.training.num_epochs}, Iter: {i + 1}/{iters_per_epoch}, Loss: {loss.item():.2f}, Time: {time_logger.time_length()}, Device: {rank}')
+                f'Epoch: {epoch + 1:4d}/{config.training.num_epochs}, Iter: {i + 1}/{iters_per_epoch}, Loss: {loss.item():.6f}, Time: {time_logger.time_length()}, Device: {rank}')
 
             optimizer.zero_grad()
             scaler.scale(loss).backward()
@@ -293,11 +290,11 @@ def train(config, workdir):
                 while x1 is not None:
                     with torch.cuda.amp.autocast(enabled=True):
                         p1, p2, z1, z2 = model(x1, x2)
-                        loss = -(criterion(p1, z2).mean() + criterion(p2, z1).mean()) / 2.
+                        loss = 1 - (criterion(p1, z2).mean() + criterion(p2, z1).mean()) / 2.
 
                     loss_sum += loss.item()
                     logger.info(
-                        f'Epoch: {epoch + 1:4d}/{config.training.num_epochs}, Iter: {i + 1}/{iters_per_eval}, Loss: {loss.item():.2f}, Time: {time_logger.time_length()}, Device: {rank}')
+                        f'Epoch: {epoch + 1:4d}/{config.training.num_epochs}, Iter: {i + 1}/{iters_per_eval}, Loss: {loss.item():.6f}, Time: {time_logger.time_length()}, Device: {rank}')
 
                     x1, x2 = test_prefetcher.next()
                     i += 1
