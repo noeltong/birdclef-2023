@@ -6,9 +6,9 @@ from utils import audio
 
 
 class BirdCLEFDataset(Dataset):
-    def __init__(self, data_lst, mode, sample_rate=32000, resample_rate=16000, num_channels=3, duration=8000, shift_factor=0.4):
+    def __init__(self, data_lst, mode, sample_rate=32000, resample_rate=16000, num_channels=3, duration=8000, shift_factor=0.4, debug=False):
         super().__init__()
-        self.data = data_lst
+        self.data = data_lst[:128] if debug else data_lst
         self.sample_rate = sample_rate
         self.resample_rate = resample_rate
         self.channel = num_channels
@@ -68,8 +68,8 @@ def get_dataloader(config, mode):
     idx = int(0.9 * len(data))
     train_data, test_data = data[:idx], data[idx:]
 
-    train_dataset = BirdCLEFDataset(train_data, mode)
-    test_dataset = BirdCLEFDataset(test_data, mode)
+    train_dataset = BirdCLEFDataset(train_data, mode, debug=config.debug)
+    test_dataset = BirdCLEFDataset(test_data, mode, debug=config.debug)
 
     train_sampler = DistributedSampler(train_dataset)
     test_sampler = DistributedSampler(test_dataset)
