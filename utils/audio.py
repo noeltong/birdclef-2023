@@ -6,11 +6,13 @@ import torch
 from torch import nn
 import random
 from torchaudio import transforms as T
+import soundfile as sf
 
 
 def read_file(path):
-    sig, sr = torchaudio.load(path)
-
+    # sig, sr = torchaudio.load(path)
+    sig, sr = sf.read(path, always_2d=True, dtype='float32')
+    sig = torch.from_numpy(sig)
     return (sig, sr)
 
 
