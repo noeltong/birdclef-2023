@@ -165,3 +165,4 @@ test.ipynb
 models/preprocess.py
 workspace/
 logs/
+.vscode/
