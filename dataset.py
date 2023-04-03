@@ -19,7 +19,23 @@ def list_classes():
 
     result.sort()
     os.makedirs('model_data', exist_ok=True)
+    print(f'Number of classes for train: {len(result)}')
     pd.DataFrame(result).to_csv('model_data/classes.csv', header=None, index=None)
+
+    idx = []
+
+    idx.extend(os.listdir('/storage/data/tongshq/kaggle/birdclef/birdclef-2023/train_audio'))
+
+    result = []
+
+    for i in tqdm(idx, total=len(idx)):
+        if i not in result:
+            result.append(i)
+
+    result.sort()
+    os.makedirs('model_data', exist_ok=True)
+    print(f'Number of classes for finetune: {len(result)}')
+    pd.DataFrame(result).to_csv('model_data/tune_classes.csv', header=None, index=None)
 
 
 def list_paths_classes():
@@ -29,6 +45,7 @@ def list_paths_classes():
     with open('/public/home/tongshq/kaggle/birdclef/model_data/classes.csv', 'r') as f:
         for idx in f.readlines():
             classes.append(idx.strip())
+    
 
     def path_label_replace_21(df, dir):
         path = os.path.join(dir, df['primary_label'], df['filename'])
@@ -36,11 +53,13 @@ def list_paths_classes():
 
         return [label, path]
     
+    
     def path_label_replace_22(df, dir):
         path = os.path.join(dir, df['filename'])
         label = classes.index(df['primary_label'])
 
         return [label, path]
+    
 
     df1 = pd.read_csv('/storage/data/tongshq/kaggle/birdclef/birdclef-2021/train_metadata.csv')
     df1 = df1.loc[:, ['primary_label', 'filename']]
@@ -56,6 +75,27 @@ def list_paths_classes():
     print(f'Number of samples: {result.shape[0]}')
     result.to_csv('model_data/data_all.csv', index=None, header=None)
 
+    classes = []
+
+    with open('/public/home/tongshq/kaggle/birdclef/model_data/tune_classes.csv', 'r') as f:
+        for idx in f.readlines():
+            classes.append(idx.strip())
+
+    def path_label_replace_23(df, dir):
+        path = os.path.join(dir, df['filename'])
+        label = classes.index(df['primary_label'])
+
+        return [label, path]
+    
+
+    df3 = pd.read_csv('/storage/data/tongshq/kaggle/birdclef/birdclef-2023/train_metadata.csv')
+    df3 = df3.loc[:, ['primary_label', 'filename']]
+    df3 = df3.apply(path_label_replace_23, dir='/storage/data/tongshq/kaggle/birdclef/birdclef-2023/train_audio', axis=1, result_type='expand')
+    df3.columns = ['label', 'path']
+
+    result = df3
+    print(f'Number of finetune samples: {result.shape[0]}')
+    result.to_csv('model_data/finetune_data.csv', index=None, header=None)
 
 
 if __name__ == '__main__':
