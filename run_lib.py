@@ -147,7 +147,7 @@ def train(config, workdir):
         train_loss_epoch = 0
 
         if rank == 0:
-            logger.info(f'Start training epoch {epoch + 1:3d}.')
+            logger.info(f'Start training epoch {epoch + 1}.')
 
         # ----------------------------
         # initialize data prefetcher
@@ -169,7 +169,7 @@ def train(config, workdir):
                                   epoch * iters_per_epoch + i)
 
             logger.info(
-                f'Epoch: {epoch + 1:3d}/{config.training.num_epochs}, Iter: {i + 1}/{iters_per_epoch}, Loss: {loss.item():.6f}, Time: {time_logger.time_length()}, Device: {rank}')
+                f'Epoch: {epoch + 1}/{config.training.num_epochs}, Iter: {i + 1}/{iters_per_epoch}, Loss: {loss.item():.6f}, Time: {time_logger.time_length()}, Device: {rank}')
 
             optimizer.zero_grad()
             scaler.scale(loss).backward()
@@ -194,12 +194,12 @@ def train(config, workdir):
         dist.barrier()
         if rank == 0:
             logger.info(
-                f'Epoch: {epoch + 1:3d}/{config.training.num_epochs}, Avg loss: {avg_train_loss_epoch}, Time: {time_logger.time_length()}')
+                f'Epoch: {epoch + 1}/{config.training.num_epochs}, Avg loss: {avg_train_loss_epoch}, Time: {time_logger.time_length()}')
 
         # save snapshot periodically
         if (epoch + 1) % config.training.save_ckpt_freq == 0:
             if rank == 0:
-                logger.info(f'Saving snapshot at epoch {epoch + 1:3d}')
+                logger.info(f'Saving snapshot at epoch {epoch + 1}')
                 snapshot = {
                     'epoch': epoch + 1,
                     'model': model_without_ddp.state_dict(),
@@ -224,7 +224,7 @@ def train(config, workdir):
         # Report loss on eval dataset periodically
         if (epoch + 1) % config.training.eval_freq == 0:
             if rank == 0:
-                logger.info(f'Start evaluate at epoch {epoch + 1:3d}.')
+                logger.info(f'Start evaluate at epoch {epoch + 1}.')
 
             eval_model = model_ema if config.model.ema else model_without_ddp
             # eval_model = model_without_ddp
@@ -248,7 +248,7 @@ def train(config, workdir):
 
                     loss_sum += loss.item()
                     logger.info(
-                        f'Epoch: {epoch + 1:3d}/{config.training.num_epochs}, Iter: {i + 1}/{iters_per_eval}, Loss: {loss.item():.6f}, Time: {time_logger.time_length()}, Device: {rank}')
+                        f'Epoch: {epoch + 1}/{config.training.num_epochs}, Iter: {i + 1}/{iters_per_eval}, Loss: {loss.item():.6f}, Time: {time_logger.time_length()}, Device: {rank}')
 
                     x1, x2 = test_prefetcher.next()
                     i += 1
@@ -259,7 +259,7 @@ def train(config, workdir):
 
             if rank == 0:
                 logger.info(
-                    f'Epoch: {epoch + 1:3d}/{config.training.num_epochs}, Avg eval loss: {avg_eval_loss_epoch}, Time: {time_logger.time_length()}')
+                    f'Epoch: {epoch + 1}/{config.training.num_epochs}, Avg eval loss: {avg_eval_loss_epoch}, Time: {time_logger.time_length()}')
 
         dist.barrier()
 
