@@ -12,6 +12,6 @@
 #SBATCH --output=logs/%j.out
 #SBATCH --error=logs/%j.err
 #SBATCH --time=10-00:00:00
-#SBATCH --nodelist=sist_gpu45
+#SBATCH --nodelist=sist_gpu63
 
-torchrun --nproc_per_node=4 main.py --mode train --config configs/default_config.py --workdir convnext_small
+torchrun --nproc_per_node=4 main.py --mode train --config configs/default_config.py --workdir convnext_small_batch_256

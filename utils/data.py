@@ -51,7 +51,7 @@ class BirdCLEFDataset(Dataset):
 
 def get_dataloader(config, mode):
 
-    csv_path = config.data.csv_path
+    csv_path = config.data.csv_path if mode == 'train' else config.data.csv_tune_path
 
     data = []
 
