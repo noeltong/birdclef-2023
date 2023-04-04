@@ -10,6 +10,7 @@ FLAGS = flags.FLAGS
 config_flags.DEFINE_config_file("config", None, "Training configuration.", lock_config=True)
 flags.DEFINE_string("workdir", None, "Work directory to store files.")
 flags.DEFINE_enum("mode", None, ['train', 'eval', 'tune'], "Running mode: pretrain, eval or finetune.")
+flags.DEFINE_string("tunedir", 'tune', "Work directory to store files.")
 flags.mark_flags_as_required(['mode', 'config'])
 
 
@@ -27,7 +28,7 @@ def main(argv):
     if FLAGS.mode == 'train':
         train(config=config, workdir=work_dir)
     elif FLAGS.mode == 'tune':
-        tune(config=config, workdir=work_dir)
+        tune(config=config, workdir=work_dir, tune_dir=FLAGS.tunedir)
     elif FLAGS.mode == 'eval':
         eval(config=config, workdir=work_dir)
 

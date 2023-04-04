@@ -268,7 +268,7 @@ def train(config, workdir):
             f'Training complete.\nTotal time:, {time_logger.time_length()}\nFinal loss:, {avg_train_loss_epoch}\nBest loss:, {best_loss}\nFinal eval loss:, {avg_eval_loss_epoch}')
 
 
-def tune(config, workdir):
+def tune(config, workdir, tune_dir):
     """Runs the finetune pipeline.
 
     Args:
@@ -278,6 +278,7 @@ def tune(config, workdir):
 
     assert config.distributed, "Distributed train is needed!"
     torch.backends.cudnn.benchmark = True
+    workdir = os.path.join(workdir, tune_dir)
 
     # -------------------
     # Initialize DDP
@@ -333,6 +334,8 @@ def tune(config, workdir):
     train_loader, test_loader, train_sampler, test_sampler = get_dataloader(config, mode='tune')
     dist.barrier()
 
+    ckpt = torch.load(config.finetune.ckpt_path, map_location='cpu')
+
     if rank == 0:
         logger.info('Data loaded.')
 
@@ -344,23 +347,16 @@ def tune(config, workdir):
         logger.info('Begin model initialization...')
 
     model = SimSiam(config=config)
+    model.load_state_dict(ckpt['model'] if not config.model.ema else ckpt['model_ema'])
+    model = model.encoder
+    model.head = nn.Linear(config.model.dims[-1], config.model.num_classes)
 
     model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
     model = model.cuda()
     model = DistributedDataParallel(model, device_ids=[rank])
 
-    model_without_ddp = model.module
-
-    if config.model.ema:
-        adjust = config.training.batch_size * \
-            config.model.ema_steps / config.training.num_epochs
-        alpha = 1 - config.model.ema_rate
-        alpha = 1 - min(1.0, alpha * adjust)
-        model_ema = ExponentialMovingAverage(
-            model_without_ddp, device=device, decay=alpha)
-
     if rank == 0:
-        logger.info("Models initialized.")
+        logger.info("Models initialized. Loaded pretrained checkpoints.")
 
     dist.barrier()
 
@@ -372,8 +368,7 @@ def tune(config, workdir):
         logger.info('Handling optimizations...')
 
     optimizer, scheduler = get_optim(model, config)
-    
-    criterion = nn.CosineSimilarity(dim=1).cuda()
+    criterion = nn.CrossEntropyLoss(label_smoothing=config.optim.label_smoothing).cuda()
 
     if rank == 0:
         logger.info('Completed.')
@@ -405,14 +400,14 @@ def tune(config, workdir):
         # initialize data prefetcher
         # ----------------------------
 
-        train_prefetcher = prefetcher(train_loader, rank, mode='train')
-        x1, x2 = train_prefetcher.next()
+        train_prefetcher = prefetcher(train_loader, rank, mode='tune')
+        x, y = train_prefetcher.next()
         i = 0
 
-        while x1 is not None:
+        while x is not None:
             with torch.cuda.amp.autocast(enabled=True):
-                p1, p2, z1, z2 = model(x1, x2)
-                loss = 1 - (criterion(p1, z2).mean() + criterion(p2, z1).mean()) / 2.
+                out = model(x)
+                loss = criterion(out, y)
 
             train_loss_epoch += loss.item()
 
@@ -434,10 +429,7 @@ def tune(config, workdir):
             scaler.step(optimizer)
             scaler.update()
 
-            if config.model.ema and i % config.model.ema_steps == 0:
-                model_ema.update_parameters(model)
-
-            x1, x2 = train_prefetcher.next()
+            x, y = train_prefetcher.next()
             i += 1
 
         scheduler.step()
@@ -454,13 +446,11 @@ def tune(config, workdir):
                 logger.info(f'Saving snapshot at epoch {epoch + 1}')
                 snapshot = {
                     'epoch': epoch + 1,
-                    'model': model_without_ddp.state_dict(),
+                    'model': model.module.state_dict(),
                     'optimizer': optimizer.state_dict(),
                     'scheduler': scheduler.state_dict(),
                     'scaler': scaler.state_dict()
                 }
-                if config.model.ema:
-                    snapshot['model_ema'] = model_ema.state_dict()
                 torch.save(snapshot, os.path.join(
                     ckpt_dir, f'{epoch+1}_loss_{avg_train_loss_epoch:.2f}.pth'))
 
@@ -470,18 +460,16 @@ def tune(config, workdir):
             if rank == 0:
                 logger.info(
                     f'Saving best model state dict at epoch {epoch + 1}.')
-                torch.save(model_ema.state_dict() if config.model.ema else model_without_ddp.state_dict,
-                           os.path.join(ckpt_dir, 'best.pth'))
+                torch.save(model.module.state_dict(), os.path.join(ckpt_dir, 'best.pth'))
 
         # Report loss on eval dataset periodically
         if (epoch + 1) % config.training.eval_freq == 0:
             if rank == 0:
                 logger.info(f'Start evaluate at epoch {epoch + 1}.')
 
-            eval_model = model_ema if config.model.ema else model_without_ddp
             # eval_model = model_without_ddp
             with torch.no_grad():
-                eval_model.eval()
+                model.eval()
                 iters_per_eval = len(test_loader)
                 loss_sum = 0
 
@@ -489,20 +477,20 @@ def tune(config, workdir):
                 # initialize data prefetcher
                 # ----------------------------
 
-                test_prefetcher = prefetcher(test_loader, rank, mode='train')
-                x1, x2 = test_prefetcher.next()
+                test_prefetcher = prefetcher(test_loader, rank, mode='tune')
+                x, y = test_prefetcher.next()
                 i = 0
 
-                while x1 is not None:
+                while x is not None:
                     with torch.cuda.amp.autocast(enabled=True):
-                        p1, p2, z1, z2 = model(x1, x2)
-                        loss = 1 - (criterion(p1, z2).mean() + criterion(p2, z1).mean()) / 2.
+                        out = model(x)
+                        loss = criterion(out, y)
 
                     loss_sum += loss.item()
                     logger.info(
                         f'Epoch: {epoch + 1}/{config.training.num_epochs}, Iter: {i + 1}/{iters_per_eval}, Loss: {loss.item():.6f}, Time: {time_logger.time_length()}, Device: {rank}')
 
-                    x1, x2 = test_prefetcher.next()
+                    x, y = test_prefetcher.next()
                     i += 1
 
                 avg_eval_loss_epoch = loss_sum / iters_per_eval
