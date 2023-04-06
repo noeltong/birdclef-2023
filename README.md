@@ -1,5 +1,7 @@
 # Contrastive Pre-Training for BirdCLEF Classification
 
+This is a simple baseline for pre-training of BirdCLEF classification. The official website of this competetion is on this [kaggle page](https://www.kaggle.com/competitions/birdclef-2023/overview). We used publically available BirdCLEF 2021 and BirdCLEF 2022 dataset for contrastive pretraining using [SimSiam](https://github.com/facebookresearch/simsiam).
+
 ## Train
 
 ```shell
