@@ -14,6 +14,8 @@ from utils.utils import seed_everything
 from models.builder import SimSiam
 from utils.utils import get_optim
 from models.ema import ExponentialMovingAverage
+from sklearn.metrics import average_precision_score
+import numpy as np
 
 
 def train(config, workdir):
@@ -157,6 +159,10 @@ def train(config, workdir):
         x1, x2 = train_prefetcher.next()
         i = 0
 
+        # ----------------------------
+        # run the training process
+        # ----------------------------
+
         while x1 is not None:
             with torch.cuda.amp.autocast(enabled=True):
                 p1, p2, z1, z2 = model(x1, x2)
@@ -197,6 +203,7 @@ def train(config, workdir):
                 f'Epoch: {epoch + 1}/{config.training.num_epochs}, Avg loss: {avg_train_loss_epoch}, Time: {time_logger.time_length()}')
 
         # save snapshot periodically
+
         if (epoch + 1) % config.training.save_ckpt_freq == 0:
             if rank == 0:
                 logger.info(f'Saving snapshot at epoch {epoch + 1}')
@@ -222,13 +229,14 @@ def train(config, workdir):
                            os.path.join(ckpt_dir, 'best.pth'))
 
         # Report loss on eval dataset periodically
+
         if (epoch + 1) % config.training.eval_freq == 0:
             if rank == 0:
                 logger.info(f'Start evaluate at epoch {epoch + 1}.')
 
             eval_model = model_ema if config.model.ema else model_without_ddp
             # eval_model = model_without_ddp
-            with torch.no_grad():
+            with torch.inference_mode():
                 eval_model.eval()
                 iters_per_eval = len(test_loader)
                 loss_sum = 0
@@ -404,6 +412,10 @@ def tune(config, workdir, tune_dir):
         x, y = train_prefetcher.next()
         i = 0
 
+        # ----------------------------
+        # run the training process
+        # ----------------------------
+
         while x is not None:
             with torch.cuda.amp.autocast(enabled=True):
                 out = model(x)
@@ -441,6 +453,7 @@ def tune(config, workdir, tune_dir):
                 f'Epoch: {epoch + 1}/{config.training.num_epochs}, Avg loss: {avg_train_loss_epoch}, Time: {time_logger.time_length()}')
 
         # save snapshot periodically
+        
         if (epoch + 1) % config.training.save_ckpt_freq == 0:
             if rank == 0:
                 logger.info(f'Saving snapshot at epoch {epoch + 1}')
@@ -463,12 +476,14 @@ def tune(config, workdir, tune_dir):
                 torch.save(model.module.state_dict(), os.path.join(ckpt_dir, 'best.pth'))
 
         # Report loss on eval dataset periodically
+
         if (epoch + 1) % config.training.eval_freq == 0:
             if rank == 0:
                 logger.info(f'Start evaluate at epoch {epoch + 1}.')
 
             # eval_model = model_without_ddp
-            with torch.no_grad():
+
+            with torch.inference_mode():
                 model.eval()
                 iters_per_eval = len(test_loader)
                 loss_sum = 0
@@ -481,10 +496,15 @@ def tune(config, workdir, tune_dir):
                 x, y = test_prefetcher.next()
                 i = 0
 
+                preds, gts = [], []
+
                 while x is not None:
                     with torch.cuda.amp.autocast(enabled=True):
                         out = model(x)
                         loss = criterion(out, y)
+
+                    preds.append(out.detach().numpy())
+                    gts.append(y.detach().numpy())
 
                     loss_sum += loss.item()
                     logger.info(
@@ -493,9 +513,15 @@ def tune(config, workdir, tune_dir):
                     x, y = test_prefetcher.next()
                     i += 1
 
+                preds = np.concatenate(preds, axis=0)
+                gts = np.concatenate(gts, axis=0)
+
+                score = average_precision_score(gts, preds, average='macro')
+
                 avg_eval_loss_epoch = loss_sum / iters_per_eval
                 if rank == 0:
                     writer.add_scalar('Eval loss', avg_eval_loss_epoch, epoch)
+                    writer.add_scalar('Score', score, epoch)
 
             if rank == 0:
                 logger.info(
