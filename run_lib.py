@@ -18,7 +18,7 @@ from sklearn.metrics import average_precision_score
 import numpy as np
 
 
-def train(config, workdir):
+def train(config, workdir, train_dir='pretrain'):
     """Runs the training pipeline.
 
     Args:
@@ -28,6 +28,7 @@ def train(config, workdir):
 
     assert config.distributed, "Distributed train is needed!"
     torch.backends.cudnn.benchmark = True
+    workdir = os.path.join(workdir, train_dir)
 
     # -------------------
     # Initialize DDP
