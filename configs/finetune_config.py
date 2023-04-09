@@ -52,7 +52,7 @@ def get_config():
     optim.weight_decay = 0.0001
     optim.min_lr = 0.001 * optim.initial_lr
     optim.warmup_epochs = None
-    optim.label_smoothing = 0.25
+    optim.label_smoothing = 0.01
 
 
     data = cfg.data = ConfigDict()
