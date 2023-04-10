@@ -49,6 +49,7 @@ def get_config():
     data = cfg.data = ConfigDict()
     data.csv_path = '/public/home/tongshq/kaggle/birdclef/model_data/data_all.csv'
     data.num_workers = 2
+    data.prefetch_factor = 1
 
 
     cfg.seed = 42

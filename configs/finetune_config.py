@@ -1,42 +1,34 @@
 from ml_collections.config_dict import ConfigDict
+from configs.pretrain_config import get_config as default_config
 
 
 def get_config():
 
-    cfg = ConfigDict()
+    cfg = default_config()
 
     # ----------------
     # Train
     # ----------------
 
-    training = cfg.training = ConfigDict()
-    training.num_epochs = 150
+    training = cfg.training
+    training.num_epochs = 100
     training.batch_size = 64
-    # 16 -> 8G, 32 -> 12G
-    training.save_ckpt_freq = 100
-    training.eval_freq = 50
+    # 32 -> 8G, 64 -> 12G
+    training.save_ckpt_freq = 10
+    training.eval_freq = 5
 
     # ----------------
     # Finetune
     # ----------------
 
     finetune = cfg.finetune = ConfigDict()
-    finetune.ckpt_path = None
+    finetune.ckpt_path = '/public/home/tongshq/kaggle/birdclef/workspace/convnext_small/pretrain/ckpt/30_loss_0.22.pth'
 
     # ----------------
     # Model
     # ----------------
 
-    model = cfg.model = ConfigDict()
-    model.depths = [3, 3, 27, 3]
-    model.dims = [96, 192, 384, 768]
-    model.drop_path_rate = 0.1
-    model.head_out_dim = 2048
-    model.pred_dim = 512
-    model.clip_grad_norm = 1.
-    model.ema = True
-    model.ema_rate = 0.999
-    model.ema_steps = 1
+    model = cfg.model
     model.num_classes = 264
 
 
@@ -44,20 +36,21 @@ def get_config():
     # Optimization
     # ----------------
 
-    cfg.optim = optim = ConfigDict()
+    optim = cfg.optim
     optim.optimizer = 'AdamW'
     optim.schedule = 'CosineAnnealingLR'
     optim.grad_clip = 1.
-    optim.initial_lr = 0.0005
+    optim.initial_lr = 0.0001
     optim.weight_decay = 0.0001
     optim.min_lr = 0.001 * optim.initial_lr
     optim.warmup_epochs = None
     optim.label_smoothing = 0.01
 
 
-    data = cfg.data = ConfigDict()
+    data = cfg.data
     data.csv_tune_path = '/public/home/tongshq/kaggle/birdclef/model_data/finetune_data.csv'
-    data.num_workers = 2
+    data.num_workers = 4
+    data.prefetch_factor = 1
 
 
     cfg.seed = 42
