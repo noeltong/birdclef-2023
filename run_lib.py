@@ -356,7 +356,7 @@ def tune(config, workdir, tune_dir):
         logger.info('Begin model initialization...')
 
     model = SimSiam(config=config)
-    model.load_state_dict(ckpt['model'] if not config.model.ema else ckpt['model_ema'])
+    model.load_state_dict(ckpt['model'] if not config.model.ema else ckpt['model_ema'], strict=False)
     model = model.encoder
     model.head = nn.Linear(config.model.dims[-1], config.model.num_classes)
 
@@ -504,8 +504,8 @@ def tune(config, workdir, tune_dir):
                         out = model(x)
                         loss = criterion(out, y)
 
-                    preds.append(out.detach().numpy())
-                    gts.append(y.detach().numpy())
+                    preds.append(out.detach().numpy().squeeze())
+                    gts.append(y.detach().numpy().squeeze())
 
                     loss_sum += loss.item()
                     logger.info(
