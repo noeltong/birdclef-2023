@@ -80,7 +80,8 @@ def get_dataloader(config, mode):
         sampler=train_sampler,
         drop_last=True,
         num_workers=config.data.num_workers,
-        pin_memory=True
+        pin_memory=True,
+        prefetch_factor=config.data.prefetch_factor
     )
     test_loader = DataLoader(
         test_dataset,
@@ -88,7 +89,8 @@ def get_dataloader(config, mode):
         sampler=test_sampler,
         drop_last=True,
         num_workers=config.data.num_workers,
-        pin_memory=True
+        pin_memory=True,
+        prefetch_factor=config.data.prefetch_factor
     )
 
     return train_loader, test_loader, train_sampler, test_sampler
