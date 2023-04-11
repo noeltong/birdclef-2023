@@ -3,6 +3,8 @@ import os
 import numpy as np
 import torch
 from models.lars import LARS
+import pandas as pd
+import sklearn.metrics
 
 
 def seed_everything(seed):
@@ -65,3 +67,21 @@ def get_optim(model, config):
         raise ValueError(f'{config.optim.schedule} is not supported.')
     
     return optimizer, scheduler
+
+
+def padded_cmap(solution, submission, padding_factor=5):
+    solution = solution.drop(['row_id'], axis=1, errors='ignore')
+    submission = submission.drop(['row_id'], axis=1, errors='ignore')
+    new_rows = []
+    for i in range(padding_factor):
+        new_rows.append([1 for i in range(len(solution.columns))])
+    new_rows = pd.DataFrame(new_rows)
+    new_rows.columns = solution.columns
+    padded_solution = pd.concat([solution, new_rows]).reset_index(drop=True).copy()
+    padded_submission = pd.concat([submission, new_rows]).reset_index(drop=True).copy()
+    score = sklearn.metrics.average_precision_score(
+        padded_solution.values,
+        padded_submission.values,
+        average='macro',
+    )
+    return score
