@@ -8,7 +8,7 @@ from utils import audio
 class BirdCLEFDataset(Dataset):
     def __init__(self, data_lst, mode, sample_rate=32000, resample_rate=16000, num_channels=3, duration=8000, shift_factor=0.4, debug=False):
         super().__init__()
-        self.data = data_lst[:128] if debug else data_lst
+        self.data = data_lst[:2048] if debug else data_lst
         self.sample_rate = sample_rate
         self.resample_rate = resample_rate
         self.channel = num_channels
