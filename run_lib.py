@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from torch.nn import functional as F
 from utils.data import get_dataloader
 import os
 import logging
@@ -14,8 +15,10 @@ from utils.utils import seed_everything
 from models.builder import SimSiam
 from utils.utils import get_optim
 from models.ema import ExponentialMovingAverage
-from sklearn.metrics import average_precision_score
+# from sklearn.metrics import average_precision_score
+from utils.utils import padded_cmap
 import numpy as np
+import pandas as pd
 
 
 def train(config, workdir, train_dir='pretrain'):
@@ -358,7 +361,7 @@ def tune(config, workdir, tune_dir):
     model = SimSiam(config=config)
     model.load_state_dict(ckpt['model'] if not config.model.ema else ckpt['model_ema'], strict=False)
     model = model.encoder
-    model.head = nn.Linear(config.model.dims[-1], config.model.num_classes)
+    model.head = nn.Linear(config.model.dims[-1], config.finetune.num_classes)
 
     model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
     model = model.cuda()
@@ -451,7 +454,7 @@ def tune(config, workdir, tune_dir):
         dist.barrier()
         if rank == 0:
             logger.info(
-                f'Epoch: {epoch + 1}/{config.training.num_epochs}, Avg loss: {avg_train_loss_epoch}, Time: {time_logger.time_length()}')
+                f'Epoch: {epoch + 1}/{config.training.num_epochs}, Avg loss: {avg_train_loss_epoch:.4f}, Time: {time_logger.time_length()}')
 
         # save snapshot periodically
         
@@ -504,8 +507,8 @@ def tune(config, workdir, tune_dir):
                         out = model(x)
                         loss = criterion(out, y)
 
-                    preds.append(out.detach().numpy().squeeze())
-                    gts.append(y.detach().numpy().squeeze())
+                    preds.append(F.softmax(out.detach()).cpu().numpy().squeeze())
+                    gts.append(np.eye(config.finetune.num_classes)[y.detach().cpu().numpy(), :].squeeze())
 
                     loss_sum += loss.item()
                     logger.info(
@@ -514,19 +517,21 @@ def tune(config, workdir, tune_dir):
                     x, y = test_prefetcher.next()
                     i += 1
 
-                preds = np.concatenate(preds, axis=0)
-                gts = np.concatenate(gts, axis=0)
+                preds = pd.DataFrame(np.concatenate(preds, axis=0))
+                gts = pd.DataFrame(np.concatenate(gts, axis=0))
 
-                score = average_precision_score(gts, preds, average='macro')
+                # score = average_precision_score(gts, preds, average='macro')
+                score = padded_cmap(gts, preds)
 
                 avg_eval_loss_epoch = loss_sum / iters_per_eval
                 if rank == 0:
                     writer.add_scalar('Eval loss', avg_eval_loss_epoch, epoch)
                     writer.add_scalar('Score', score, epoch)
 
+            dist.barrier()
             if rank == 0:
                 logger.info(
-                    f'Epoch: {epoch + 1}/{config.training.num_epochs}, Avg eval loss: {avg_eval_loss_epoch}, Time: {time_logger.time_length()}')
+                    f'Epoch: {epoch + 1}/{config.training.num_epochs}, Avg eval loss: {avg_eval_loss_epoch:4f}, Eval Score: {score:.4f} Time: {time_logger.time_length()}')
 
         dist.barrier()
 
