@@ -404,6 +404,7 @@ def tune(config, workdir, tune_dir):
         test_sampler.set_epoch(epoch)
         model.train()
         train_loss_epoch = 0
+        best_eval_score = 0.
 
         if rank == 0:
             logger.info(f'Start training epoch {epoch + 1}.')
@@ -471,14 +472,6 @@ def tune(config, workdir, tune_dir):
                 torch.save(snapshot, os.path.join(
                     ckpt_dir, f'{epoch+1}_loss_{avg_train_loss_epoch:.2f}.pth'))
 
-        is_best = avg_train_loss_epoch < best_loss
-        if is_best:
-            best_loss = avg_train_loss_epoch
-            if rank == 0:
-                logger.info(
-                    f'Saving best model state dict at epoch {epoch + 1}.')
-                torch.save(model.module.state_dict(), os.path.join(ckpt_dir, 'best.pth'))
-
         # Report loss on eval dataset periodically
 
         if (epoch + 1) % config.training.eval_freq == 0:
@@ -522,6 +515,13 @@ def tune(config, workdir, tune_dir):
 
                 # score = average_precision_score(gts, preds, average='macro')
                 score = padded_cmap(gts, preds)
+                dist.barrier()
+                if score > best_eval_score:
+                    best_eval_score = score
+                    if rank == 0:
+                        logger.info(
+                            f'Saving best model state dict at epoch {epoch + 1}.')
+                        torch.save(model.module.state_dict(), os.path.join(ckpt_dir, 'best.pth'))
 
                 avg_eval_loss_epoch = loss_sum / iters_per_eval
                 if rank == 0:
