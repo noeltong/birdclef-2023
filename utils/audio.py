@@ -48,7 +48,10 @@ def pad_trunc(aud, max_ms):
     max_len = sr // 1000 * max_ms
 
     if sig_len > max_len:
-        sig = sig[:, :max_len]
+        max_start = sig_len - max_len
+        start = random.randint(0, max_start - 1)
+        end = start + max_len
+        sig = sig[:, start : end]
 
     elif sig_len < max_len:
         pad_begin_len = random.randint(0, max_len - sig_len)
