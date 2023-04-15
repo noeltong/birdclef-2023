@@ -510,28 +510,31 @@ def tune(config, workdir, tune_dir):
                     x, y = test_prefetcher.next()
                     i += 1
 
-                preds = pd.DataFrame(np.concatenate(preds, axis=0))
-                gts = pd.DataFrame(np.concatenate(gts, axis=0))
+            preds = pd.DataFrame(np.concatenate(preds, axis=0))
+            gts = pd.DataFrame(np.concatenate(gts, axis=0))
 
-                # score = average_precision_score(gts, preds, average='macro')
-                score = padded_cmap(gts, preds)
-                dist.barrier()
-                if score > best_eval_score:
-                    best_eval_score = score
-                    if rank == 0:
-                        logger.info(
-                            f'Saving best model state dict at epoch {epoch + 1}.')
-                        torch.save(model.module.state_dict(), os.path.join(ckpt_dir, 'best.pth'))
-
-                avg_eval_loss_epoch = loss_sum / iters_per_eval
+            # score = average_precision_score(gts, preds, average='macro')
+            score = padded_cmap(gts, preds)
+            dist.barrier()
+            if score > best_eval_score:
+                logger.info(f'Obtained new highest score {score} against previous best at {best_eval_score}.')
+                best_eval_score = score
                 if rank == 0:
-                    writer.add_scalar('Eval loss', avg_eval_loss_epoch, epoch)
-                    writer.add_scalar('Score', score, epoch)
+                    logger.info(
+                        f'Saving best model state dict at epoch {epoch + 1}.')
+                    torch.save(model.module.state_dict(), os.path.join(ckpt_dir, 'best.pth'))
+
+            avg_eval_loss_epoch = loss_sum / iters_per_eval
+            if rank == 0:
+                writer.add_scalar('Eval loss', avg_eval_loss_epoch, epoch)
+                writer.add_scalar('Score', score, epoch)
 
             dist.barrier()
             if rank == 0:
                 logger.info(
                     f'Epoch: {epoch + 1}/{config.training.num_epochs}, Avg eval loss: {avg_eval_loss_epoch:4f}, Eval Score: {score:.4f} Time: {time_logger.time_length()}')
+            
+            dist.barrier()
 
         dist.barrier()
 
