@@ -75,7 +75,7 @@ def time_shift(aud, shift_limit):
 
 def spectrogram(aud, n_mels=64, n_fft=1024, hop_len=None):
     sig, sr = aud
-    top_db = 80
+    top_db = 80.
 
     # spec has shape [channel, n_mels, time], where channel is mono, stereo etc
     spec = torchaudio.transforms.MelSpectrogram(

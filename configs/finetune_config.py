@@ -11,7 +11,7 @@ def get_config():
     # ----------------
 
     training = cfg.training
-    training.num_epochs = 50
+    training.num_epochs = 100
     training.batch_size = 32
     # 32 -> 8G, 64 -> 12G
     training.save_ckpt_freq = 10
