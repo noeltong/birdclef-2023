@@ -395,6 +395,7 @@ def tune(config, workdir, tune_dir):
 
     best_loss = 999999999.
     iters_per_epoch = len(train_loader)
+    best_eval_score = 0.
 
     dist.barrier()
     torch.cuda.empty_cache()
@@ -404,7 +405,6 @@ def tune(config, workdir, tune_dir):
         test_sampler.set_epoch(epoch)
         model.train()
         train_loss_epoch = 0
-        best_eval_score = 0.
 
         if rank == 0:
             logger.info(f'Start training epoch {epoch + 1}.')
@@ -513,11 +513,10 @@ def tune(config, workdir, tune_dir):
             preds = pd.DataFrame(np.concatenate(preds, axis=0))
             gts = pd.DataFrame(np.concatenate(gts, axis=0))
 
-            # score = average_precision_score(gts, preds, average='macro')
             score = padded_cmap(gts, preds)
             dist.barrier()
             if score > best_eval_score:
-                logger.info(f'Obtained new highest score {score} against previous best at {best_eval_score}.')
+                logger.info(f'Obtained new highest score {score} against previous best of {best_eval_score}.')
                 best_eval_score = score
                 if rank == 0:
                     logger.info(
