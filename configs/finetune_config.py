@@ -12,7 +12,7 @@ def get_config():
 
     training = cfg.training
     training.num_epochs = 100
-    training.batch_size = 32
+    training.batch_size = 64
     # 32 -> 8G, 64 -> 12G
     training.save_ckpt_freq = 10
     training.eval_freq = 1
@@ -22,7 +22,7 @@ def get_config():
     # ----------------
 
     finetune = cfg.finetune = ConfigDict()
-    finetune.ckpt_path = '/public/home/tongshq/kaggle/birdclef/workspace/convnext_small/pretrain/ckpt/30_loss_0.22.pth'
+    finetune.ckpt_path = '/public/home/tongshq/kaggle/birdclef/workspace/convnext_small/pretrain/ckpt/50_loss_0.64.pth'
     finetune.num_classes = 264
 
     # ----------------
@@ -37,10 +37,10 @@ def get_config():
     # ----------------
 
     optim = cfg.optim
-    optim.optimizer = 'AdamW'
+    optim.optimizer = 'RAdam'
     optim.schedule = 'CosineAnnealingLR'
     optim.grad_clip = 1.
-    optim.initial_lr = 1e-3
+    optim.initial_lr = 1e-4
     optim.weight_decay = 0.0001
     optim.min_lr = 0.001 * optim.initial_lr
     optim.warmup_epochs = None

@@ -40,7 +40,7 @@ def get_config():
     optim.optimizer = 'LARS'
     optim.schedule = 'CosineAnnealingLR'
     optim.grad_clip = 1.
-    optim.initial_lr = 0.01
+    optim.initial_lr = 0.1
     optim.weight_decay = 0.0001
     optim.min_lr = 0.001 * optim.initial_lr
     optim.warmup_epochs = None
