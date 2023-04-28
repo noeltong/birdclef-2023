@@ -36,6 +36,12 @@ def get_optim(model, config):
             lr=init_lr,
             weight_decay=config.optim.weight_decay,
         )
+    elif config.optim.optimizer.lower() == 'radam':
+        optimizer = torch.optim.RAdam(
+            model.parameters(),
+            lr=init_lr,
+            weight_decay=config.optim.weight_decay
+        )
     else:
         raise NotImplementedError(
             f'{config.optim.optimizer} is not supported.')
