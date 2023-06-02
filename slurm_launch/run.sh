@@ -14,6 +14,6 @@
 #SBATCH --time=10-00:00:00
 #SBATCH --exclude=sist_gpu[41-62]
 
-torchrun --nproc_per_node=4 main.py --mode train --config configs/pretrain_config.py --workdir convnext
+# torchrun --nproc_per_node=4 main.py --mode train --config configs/pretrain_config.py --workdir convnext_small
 
-# torchrun --nproc_per_node=4 main.py --mode tune --config configs/finetune_config.py --workdir convnext_small
+torchrun --nproc_per_node=4 main.py --mode tune --config configs/finetune_config.py --workdir convnext_small
